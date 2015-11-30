@@ -61,20 +61,12 @@ class Brain:
                 for line in cfile:
                     line = line.strip()
                     cdata = line.split(", ")
-                    temp_cluster = Cluster(float(cdata[1]), float(cdata[2]), float(cdata[3]), int(cdata[0]), int(cdata[4]))
-                    ndata = []
-                    ndata = cdata[5].split("-")
-                    for nd in ndata:
-                        for neuron in self.neurons:
-                            if int(nd) == neuron.get_cluster():
-                                # print("nd: " + str(nd))
-                                # print(neuron.info())
-                                temp_cluster.add_neuron(neuron)
-                    self.clusters.append(temp_cluster)
-
-            for c in self.clusters:
-                # c.print_neurons()
-                pass
+                    temp_cluster = Cluster(float(cdata[1]), float(cdata[2]), float(cdata[3]), int(cdata[0]))
+                    for neuron in self.neurons:
+                        # print(neuron.info())
+                        if int(cdata[0]) == int(neuron.get_cluster()):
+                            temp_cluster.add_neuron(neuron)
+                    self.clusters.insert(len(self.clusters), temp_cluster)
 
             with open(edgesfile, "r") as efile:
                 efile.readline().strip() # dump edges count

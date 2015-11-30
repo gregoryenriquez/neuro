@@ -1,12 +1,12 @@
 class Cluster:
 
-    def __init__(self, x, y, z, c_id, c_size=0, n_list=[]):
+    def __init__(self, x, y, z, c_id):
         self.x = x
         self.y = y
         self.z = z
         self.c_id = c_id
-        self.neurons = n_list
-        self.cluster_size = c_size
+        self.neurons = []
+        self.cluster_size = 0
 
     def add_neuron(self, neuron):
         # print("added neuron: " + neuron.info())
@@ -47,7 +47,7 @@ class Cluster:
         return self.neurons
 
     def print_neurons(self):
-        print("Cluster# " + str(self.c_id))
+        print("Cluster# " + str(self.cluster_id))
         for n in self.neurons:
             print("id: " + str(n.n_id) + " X: " + str(n.x) + "\tY: " + str(n.y) + "\tZ: " + str(n.z) + "\tCID: " + str(n.cluster_id))
 
