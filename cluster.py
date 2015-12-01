@@ -65,9 +65,9 @@ class Cluster:
 
         if sum_x + sum_y + sum_z == 0.0:
             return
-        self.x = float(self.x) / float(len(self.neurons))
-        self.y = float(self.y) / float(len(self.neurons))
-        self.z = float(self.z) / float(len(self.neurons))
+        self.x = float(sum_x) / float(len(self.neurons))
+        self.y = float(sum_y) / float(len(self.neurons))
+        self.z = float(sum_z) / float(len(self.neurons))
 
     def move_neuron(self, neuron, other_cluster):
         temp_neuron = neuron
