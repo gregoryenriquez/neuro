@@ -54,7 +54,7 @@ class Brain:
                 for line in nfile:
                     line = line.strip()
                     ndata = line.split(", ")
-                    self.neurons.append(Neuron(float(ndata[1]), float(ndata[2]), float(ndata[3]), int(ndata[0]), int(ndata[4])))
+                    self.neurons.append(Neuron(int(ndata[1]), int(ndata[2]), int(ndata[3]), int(ndata[0]), int(ndata[4])))
 
             with open(clustersfile, "r") as cfile:
                 self.num_clusters = cfile.readline().strip() # read first line count in
@@ -73,7 +73,7 @@ class Brain:
                 for line in efile:
                     line = line.strip()
                     edata = line.split(", ")
-                    self.edges.append([edata[0], edata[1]])
+                    self.edges.append([int(edata[0]), int(edata[1])])
 
     def generate_neurons(self, distribution_type, max_val):
         print("Max neuron dimension value: {0}".format(max_val))
@@ -213,15 +213,6 @@ class Brain:
         print("Saved to {0}\ directory".format(str(TIMESTAMP)))
 
     def count_all_triangles(self):
-        # size = len(build_list_output) 
-        # i = 0
-        # for build in build_list_output:
-        #     percentage = float(i / float(size)) * 100
-        #     diff = 100 - percentage
-        #     if (i % 1 == 0):
-        #         sys.stdout.write("\r[" + "#" * int(percentage) + " " * int(diff) + "]" + "{0:.2f}".format(percentage) + "%")                
-        #         sys.stdout.flush()
-        #     i += 1
 
         brain_size = len(self.neurons)
         cube_size = (brain_size * (brain_size - 1) * (brain_size - 2)) / 6
@@ -238,13 +229,13 @@ class Brain:
                             counter += 1
 
                         if DEBUG is True:
-                            sys.stdout.write("\rTriangles: " + str(counter))
-                            sys.stdout.flush()
-                            # percentage = float(i)/float(cube_size) * 100
-                            # diff = 100 - percentage
-                            # sys.stdout.write("\r[" + "#" * int(percentage) + " " * int(diff) + "]" + "{0:.2f}".format(percentage) + "%")                
+                            # sys.stdout.write("\rTriangles: " + str(counter))
                             # sys.stdout.flush()
-                            # i += 1
+                            percentage = float(i)/float(cube_size) * 100
+                            diff = 100 - percentage
+                            sys.stdout.write("\r[" + "#" * int(percentage) + " " * int(diff) + "]" + "{0:.2f}".format(percentage) + "%")                
+                            sys.stdout.flush()
+                            i += 1
             print("\n")
         except KeyboardInterrupt:
             print("\n")
@@ -269,7 +260,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", dest="neurons", type=int)
     parser.add_argument("-m", dest="maxvalue", type=int)
     parser.add_argument("-i", dest="iterations", type=int)
-    parser.add_argument("--load-brain", dest="brain_data", type=str, default=None, help="timestamp dir/")
+    parser.add_argument("--load-brain", dest="brain_data_dir", type=str, default=None, help="timestamp dir/")
     parser.add_argument("--save-brain-nodes-and-edges", dest="persist", action="store_true", default=False)
     parser.add_argument("--debug", dest="debug", action="store_true", default=False)
     parser.add_argument("--neuron-distribution", dest="neuron_distribution_type", choices=["clustered", "uniform", "random"])
@@ -285,10 +276,10 @@ if __name__ == "__main__":
         cmd = "mkdir {0}".format(TIMESTAMP)
         Popen(shlex.split(cmd))
 
-    if options.brain_data is not None:
-        brain = Brain(braindata=options.brain_data)
+    if options.brain_data_dir is not None:
+        brain = Brain(braindata=options.brain_data_dir)
 
-    if options.brain_data is None:
+    if options.brain_data_dir is None:
         neurons = options.neurons
         clusters = options.clusters
         maxvalue = options.maxvalue
@@ -302,5 +293,8 @@ if __name__ == "__main__":
         brain.save_brain()
 
     print(brain.info())
+    start_time = float(time.time())
+    print("Counting ALL (N^3 time) triangles... this may take a while")
     triangles = brain.count_all_triangles()
     print("Triangles: " + str(triangles))
+    print("Runtime: {0} seconds".format(str(float(time.time()) - float(start_time) / 1000)))

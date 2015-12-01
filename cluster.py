@@ -47,7 +47,7 @@ class Cluster:
         return self.neurons
 
     def print_neurons(self):
-        print("Cluster# " + str(self.cluster_id))
+        print("Cluster# " + str(self.c_id))
         for n in self.neurons:
             print("id: " + str(n.n_id) + " X: " + str(n.x) + "\tY: " + str(n.y) + "\tZ: " + str(n.z) + "\tCID: " + str(n.cluster_id))
 
