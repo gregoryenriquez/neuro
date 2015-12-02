@@ -27,7 +27,6 @@ class Brain:
     num_neurons = 0
     max_value = 0 
 
-    # def __init__(self, neurons, clusters, max_value):
     def __init__(self, *args, **kwargs):
         braindata = kwargs.get("braindata", None)
         if braindata is None:
@@ -90,19 +89,34 @@ class Brain:
                 centers_list.append(temp_neur)
 
             temp_dict = {}
+            max_inter_cluster_distance = int(max_val * 0.03)
+            print("Max intra cluster distance: " + str(max_inter_cluster_distance))
             for i in xrange(self.num_neurons):
-                max_inter_cluster_distance = int(max_val * 0.05) 
                 center_choice = randrange(0, len(centers_list))
-                x = centers_list[center_choice].x + randrange(0, max_inter_cluster_distance)
-                y = centers_list[center_choice].y + randrange(0, max_inter_cluster_distance)
-                z = centers_list[center_choice].z + randrange(0, max_inter_cluster_distance)
+                x_lower_bound = centers_list[center_choice].x - max_inter_cluster_distance
+                if x_lower_bound < 0:
+                    x_lower_bound = 0
+
+                y_lower_bound = centers_list[center_choice].y - max_inter_cluster_distance
+                if y_lower_bound < 0:
+                    y_lower_bound = 0
+
+                z_lower_bound = centers_list[center_choice].z - max_inter_cluster_distance
+                if z_lower_bound < 0:
+                    z_lower_bound = 0
+
+                x = randrange(x_lower_bound, centers_list[center_choice].x + max_inter_cluster_distance)
+                y = randrange(y_lower_bound, centers_list[center_choice].y + max_inter_cluster_distance)
+                z = randrange(z_lower_bound, centers_list[center_choice].z + max_inter_cluster_distance)
+
                 attempts = 0
                 while (x, y, z) in temp_dict.keys():
-                    print("WARN: Random dupe neuron")
-                    x = centers_list[center_choice].x + randrange(0, max_inter_cluster_distance)
-                    y = centers_list[center_choice].y + randrange(0, max_inter_cluster_distance)
-                    z = centers_list[center_choice].z + randrange(0, max_inter_cluster_distance)
+                    x = randrange(x_lower_bound, centers_list[center_choice].x + max_inter_cluster_distance)
+                    y = randrange(y_lower_bound, centers_list[center_choice].y + max_inter_cluster_distance)
+                    z = randrange(z_lower_bound, centers_list[center_choice].z + max_inter_cluster_distance)
                     attempts += 1
+                    if attempts > 10:
+                        print("WARN: Multiple attempts getting random dupe neuron")
                     if attempts > 100:
                         print("Quitting due to possible infinite loop when generating neurons")
                         sys.exit(1)
@@ -115,14 +129,14 @@ class Brain:
             num_per_dimension = ceil(self.num_neurons ** (1./3.))
             self.num_neurons = int(num_per_dimension) ** 3
             print("Adjusting for uniform, neuron count now: " + str(self.num_neurons))
-            distance = float(max_val)/int(num_per_dimension - 1) #include [0, 0, 0]
+            distance = float(max_val)/int(num_per_dimension) 
             if DEBUG:
                 print("Number per dimension: " + str(num_per_dimension))
                 print("Distance between neurons: " + str(distance))
             for x in xrange(int(num_per_dimension)):
                 for y in xrange(int(num_per_dimension)):
                     for z in xrange(int(num_per_dimension)):
-                        self.neurons.append(Neuron(x*distance, y*distance, z*distance, counter))
+                        self.neurons.append(Neuron((x+1)*distance, (y+1)*distance, (z+1)*distance, counter))
                         counter += 1
 
         elif distribution_type == "random":
@@ -132,51 +146,41 @@ class Brain:
                 z = randrange(0, max_val)
                 self.neurons.append(Neuron(x, y, z, i))
 
-        # if DEBUG:
-        #     for i in xrange(len(self.neurons)):
-        #         print(self.neurons[i].info())
 
-    def generate_synapses(self, intra_prob, inter_prob, inter_thresh, intra_thresh):
+    def generate_synapses(self, intra_prob, inter_prob, intra_thresh, inter_thresh):
         # N^N time
         # reduced to N! time
         # 10,000 to 1 ratio
 
-        # define inner_threshold
+        # define euclidean distance thresholds
         intra_thresh = (float(intra_thresh)/float(100) * self.max_value) ** (3.0/2.0)
         inter_thresh = (float(inter_thresh)/float(100) * self.max_value) ** (3.0/2.0)
         print("Euclidean threshold distance for intracluster(Pr={0}%): {1}".format(str(intra_prob), str(intra_thresh)))
         print("Euclidean threshold distance for intercluster(Pr={0}%): {1}".format(str(inter_prob), str(inter_thresh)))
-
+        total_intra = 0 
+        total_inter = 0
         for i in xrange(len(self.neurons)):
             for j in xrange(len(self.neurons[i:len(self.neurons)])):
-                dist = self.neurons[i].calc_distance(self.neurons[j])
+                dist = self.neurons[i].calc_distance(self.neurons[j+i])
                 dice = randrange(0, 100)
                 dice_back = randrange(0, 100)
                 if dist < intra_thresh:
-                    if dice > intra_prob:
+                    if dice <= intra_prob:
+                        total_intra += 1
                         self.edges.append([i, j + i])
-                        # self.edges.append(Synapse(i, j + i))
-                    if dice_back > intra_prob:
+                    if dice_back <= intra_prob:
+                        total_intra += 1
                         self.edges.append([j + i, i])
-                        # self.edges.append(Synapse(j + i, i))
                 elif dist < inter_thresh:
-                    if dice > inter_prob:
-                        self.edges.append([i, j+ i])
-                        # self.edges.append(Synapse(i, j + i))
-                    if dice_back > inter_prob:
+                    if dice <= inter_prob:
+                        total_inter += 1
+                        self.edges.append([i, j + i])
+                    if dice_back <= inter_prob:
+                        total_inter += 1
                         self.edges.append([j + i, i])
-                        # self.edges.append(Synapse(j + i, i))
 
-        # if DEBUG:
-        #     for i in xrange(len(self.edges)):
-        #         print(self.edges[i])
-
-        # self.edges.insert(0, [0, 1])
-        # self.edges.insert(0, [1, 0])
-        # self.edges.insert(0, [0, 2])
-        # self.edges.insert(0, [2, 0])
-        # self.edges.insert(0, [1, 2])
-        # self.edges.insert(0, [2, 1])
+        print("Total intra edges: {0}".format(str(total_intra)))
+        print("Total inter edges: {0}".format(str(total_inter)))
 
     def k_cluster_neurons(self, iterations):
         for iter_ in xrange(iterations):
@@ -185,28 +189,19 @@ class Brain:
                 old_cluster_id = n.get_cluster()
                 for c in self.clusters:
                     distance = n.calc_distance(c)
-                    # print("Distance to cluster#: " + str(c.get_cluster_id()) + " distance: " + str(distance))
-                    distances.insert(len(distances), distance)
+                    distances.insert(c.c_id, distance)
                 index = distances.index(min(distances)) # cluster of index with min value
 
                 n.set_cluster(index)
-                # print("Assigning: " + n.info() + " to cluster#: " + str(index))
                 if old_cluster_id == -1:
-                    # n.set_cluster(index)
                     self.clusters[index].add_neuron(n)                    
                 elif old_cluster_id == index:
                     pass
                 else:
-                    # n.set_cluster(index)
                     self.clusters[old_cluster_id].move_neuron(n, self.clusters[index])
-                    # self.clusters[index].move_neuron(n, self.clusters[old_cluster_id])
 
             for c in self.clusters:
                 c.center_centroid()
-
-        for c in self.clusters:
-            print("Cluster #{0}".format(str(c.get_cluster_id())) + " Center: {0}".format(c.get_centroid_coordinates()))
-            print("----------------------------------------")
 
     def generate_edges_map(self):
         edges_dict = {}
@@ -218,7 +213,6 @@ class Brain:
 
     def print_cluster_info(self):
         for c in self.clusters:
-            # c.print_neurons()
             print(c.info())
 
     def save_brain(self):
@@ -241,14 +235,16 @@ class Brain:
 
     def save_result(self, result):
         with open(str(TIMESTAMP) + "/results.txt", "a") as results_file:
-            results_file.write(str(result))
+            results_file.write(str(result) + "\n")
 
     def count_cluster_triangles(self):
         counter = 0
         total_loops_count = 0
         for c in self.clusters:
-            print("Cluster #{0}".format(str(c.get_cluster_id())))
             cluster_size = c.get_cluster_size()
+            if cluster_size == 0:
+                continue
+            print("Cluster #{0} Size: {1}".format(str(c.get_cluster_id()), str(cluster_size)))
             cubed_size = cluster_size * (cluster_size - 1) * (cluster_size - 2)
             cubed_size = cubed_size / 6
 
@@ -259,18 +255,15 @@ class Brain:
             neurons = c.get_neurons()
 
             try:
-                # for n1 in self.clusters[c_id].get_neurons():
-                for n in xrange(len(neurons)): #0 to 48
-                    for j in xrange(len(neurons[n+1:cluster_size])): #i to 48
-                        for z in xrange(len(neurons[n+j+2:cluster_size])): #j to 48
+                for n in xrange(len(neurons)): #0 to max
+                    for j in xrange(len(neurons[n+1:cluster_size])): #i to max
+                        for z in xrange(len(neurons[n+j+2:cluster_size])): #j+i to max
                             n1 = neurons[n]
                             n2 = neurons[j+n+1]
                             n3 = neurons[z+n+j+2]
                             if self.is_a_triangle(n1, n2, n3):
                                 counter += 1
                             if DEBUG is True:
-                                # sys.stdout.write("\rTriangles: " + str(counter))
-                                # sys.stdout.flush()
                                 percentage = float(i)/float(cubed_size) * 100
                                 diff = 100 - percentage
                                 sys.stdout.write("\r[" + "#" * int(percentage) + " " * int(diff) + "]" + "{0:.2f}".format(percentage) + "%")                
@@ -307,8 +300,6 @@ class Brain:
                             counter += 1
 
                         if DEBUG is True:
-                            # sys.stdout.write("\rTriangles: " + str(counter))
-                            # sys.stdout.flush()
                             percentage = float(i)/float(cube_size) * 100
                             diff = 100 - percentage
                             sys.stdout.write("\r[" + "#" * int(percentage) + " " * int(diff) + "]" + "{0:.2f}".format(percentage) + "%")                
@@ -332,11 +323,6 @@ class Brain:
                     EDGES_DICT[(n3.n_id, n1.n_id)] and EDGES_DICT[(n2.n_id, n3.n_id)] and EDGES_DICT[(n3.n_id, n2.n_id)]
         except KeyError:
             return False
-        # if [n1.n_id, n2.n_id] in self.edges and [n2.n_id, n1.n_id] in self.edges:
-        #     if [n1.n_id, n3.n_id] in self.edges and [n1.n_id, n3.n_id] in self.edges:
-        #         if [n2.n_id, n3.n_id] in self.edges and [n3.n_id, n2.n_id] in self.edges:
-        #             return True
-        # return False
 
     def info(self):
         return "Neurons: " + str(len(self.neurons)) + " Synapses: " + str(len(self.edges)) + " Clusters: " + str(len(self.clusters))
@@ -355,8 +341,8 @@ if __name__ == "__main__":
     parser.add_argument("--save-brain-nodes-and-edges", dest="persist", action="store_true", default=False)
     parser.add_argument("--debug", dest="debug", action="store_true", default=False)
     parser.add_argument("--neuron-distribution", dest="neuron_distribution_type", choices=["clustered", "uniform", "random"])
-    parser.add_argument("--inter-cluster-edge-prob-perct", dest="intercluster_edge_probability", type=int)
-    parser.add_argument("--intra-cluster-edge-prob-perct", dest="intracluster_edge_probability", type=int)
+    parser.add_argument("--inter-cluster-edge-prob-perct", dest="intercluster_edge_probability", type=float)
+    parser.add_argument("--intra-cluster-edge-prob-perct", dest="intracluster_edge_probability", type=float)
     parser.add_argument("--inter-cluster-threshold-percentage", dest="intercluster_thresh", type=int)
     parser.add_argument("--intra-cluster-threshold-percentage", dest="intracluster_thresh", type=int)
     options = parser.parse_args()
@@ -378,50 +364,38 @@ if __name__ == "__main__":
         maxvalue = options.maxvalue
         brain = Brain(neurons, clusters, maxvalue)
         brain.generate_neurons(options.neuron_distribution_type, options.maxvalue, clusters)
-        brain.generate_synapses(options.intracluster_edge_probability, options.intercluster_edge_probability,
-                                options.intercluster_thresh, options.intracluster_thresh)
+        brain.generate_synapses(intra_prob=options.intracluster_edge_probability, 
+                                inter_prob=options.intercluster_edge_probability,
+                                intra_thresh=options.intracluster_thresh,
+                                inter_thresh=options.intercluster_thresh)
         brain.k_cluster_neurons(options.iterations)
 
     EDGES_DICT = brain.generate_edges_map()
-
-    # brain.clusters = []
-    #hack
-    # brain.num_clusters = options.clusters
-    # for n in brain.neurons:
-    #     n.set_cluster(-1)
-    # brain.clusters = []
-    # for n in xrange(brain.num_clusters):
-    #     x = randrange(0, options.maxvalue)
-    #     y = randrange(0, options.maxvalue)
-    #     z = randrange(0, options.maxvalue)
-    #     brain.clusters.insert(len(brain.clusters), Cluster(x, y, z, n))
-
-    # brain.k_cluster_neurons(options.iterations)
-
-    #end hack
 
     if SAVE is True:
         brain.save_brain()
 
     print(brain.info())
-    brain.print_cluster_info()
 
     if skip_clusters is False:
+        brain.print_cluster_info()
         start_time = int(time.time())
         print("Counting cluster triangles... this may take a while")
         triangles = brain.count_cluster_triangles()
         print("Triangles: " + str(triangles))
-        end_time = int(time.time())
+        end_time = time.time()
         print("Runtime for cluster triangles: {0} seconds".format(str((end_time - start_time))))
+        brain.save_result("Triangles: " + str(triangles))
         brain.save_result("Clusters runtime: {0}".format(str(end_time - start_time)))
 
     if skip_all is False:
         start_time = int(time.time())
-        print("Counting ALL (N^3 time) triangles... this may take a while")
+        print("Counting ALL (~N^3 time) triangles... this may take a while")
         triangles = brain.count_all_triangles()
         print("Triangles: " + str(triangles))
-        end_time = int(time.time())
+        end_time = time.time()
         print("Runtime for all triangles: {0} seconds".format(str((end_time - start_time))))
+        brain.save_result("Triangles: " + str(triangles))
         brain.save_result("All runtime: {0}".format(str(end_time - start_time)))
 
 
